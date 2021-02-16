@@ -14,5 +14,8 @@
 # Reference files
 ples/
 
+# Mains not ready to share
+deezer/cmd/
+
 # Dependency directories (remove the comment below to include it)
 # vendor/

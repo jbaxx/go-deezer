@@ -1,5 +1,7 @@
 on: [push, pull_request]
 name: tests
+env:
+  GO111MODULE: on
 
 jobs:
   test:

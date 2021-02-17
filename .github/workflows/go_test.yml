@@ -21,6 +21,3 @@ jobs:
 
       - name: Run go test
         go test -v -race -coverprofile coverage.txt -covermode atomic ./...
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1

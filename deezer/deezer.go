@@ -198,7 +198,7 @@ type Contributors struct {
 
 // Artist is for Album
 type Artist struct {
-	ID            string `json:"id"`
+	ID            int    `json:"id"`
 	Name          string `json:"name"`
 	Picture       string `json:"picture"`
 	PictureSmall  string `json:"picture_small"`
@@ -211,14 +211,14 @@ type Artist struct {
 
 // TracksData is for Album
 type TracksData struct {
-	ID                    string `json:"id"`
+	ID                    int    `json:"id"`
 	Readable              bool   `json:"readable"`
 	Title                 string `json:"title"`
 	TitleShort            string `json:"title_short"`
 	TitleVersion          string `json:"title_version"`
 	Link                  string `json:"link"`
-	Duration              string `json:"duration"`
-	Rank                  string `json:"rank"`
+	Duration              int    `json:"duration"`
+	Rank                  int    `json:"rank"`
 	ExplicitLyrics        bool   `json:"explicit_lyrics"`
 	ExplicitContentLyrics int    `json:"explicit_content_lyrics"`
 	ExplicitContentCover  int    `json:"explicit_content_cover"`

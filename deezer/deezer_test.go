@@ -34,6 +34,25 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
+func TestNewRequest(t *testing.T) {
+	c := NewClient()
+
+	inURL, outURL := "/algo", defaultBaseURL+"algo"
+	req, err := c.NewRequest(http.MethodGet, inURL, nil)
+	if err != nil {
+		t.Errorf("expected nil, got error: %v", err)
+	}
+
+	if got, want := req.URL.String(), outURL; got != want {
+		t.Errorf("NewRequest(%q) URL is: %v, want %v", inURL, got, want)
+	}
+
+	if got, want := req.Header.Get("Accept"), "application/json"; got != want {
+		t.Errorf("NewRequest() Accept header is: %v, want: %v", got, want)
+	}
+
+}
+
 func TestGetAlbum(t *testing.T) {
 	client, mux, teardown := setup()
 	defer teardown()

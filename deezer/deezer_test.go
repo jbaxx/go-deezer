@@ -1,9 +1,11 @@
 package deezer
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"testing"
 )
 
@@ -57,4 +59,80 @@ func TestNewRequest_BadURL(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error, got nil")
 	}
+}
+
+func TestDo(t *testing.T) {
+	client, mux, teardown := setup()
+	defer teardown()
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, http.MethodGet; got != want {
+			t.Errorf("Request method: %v, want: %v", got, want)
+		}
+		fmt.Fprintf(w, `{"key": "value"}`)
+	})
+
+	type base struct {
+		Key string
+	}
+
+	req, _ := client.NewRequest(http.MethodGet, ".", nil)
+	body := new(base)
+	_, err := client.Do(req, body)
+	if err != nil {
+		t.Errorf("expected nil, got error: %v", err)
+	}
+
+	want := &base{"value"}
+	if !reflect.DeepEqual(body, want) {
+		t.Errorf("Response body: %v, want %v", body, want)
+	}
+
+}
+
+func TestDo_withHTTPError(t *testing.T) {
+	client, mux, teardown := setup()
+	defer teardown()
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+	})
+
+	req, _ := client.NewRequest(http.MethodGet, ".", nil)
+	_, err := client.Do(req, nil)
+
+	if err == nil {
+		t.Errorf("expected HTTP 400 error got nil")
+	}
+
+}
+
+func TestDo_withDeezerAPIError(t *testing.T) {
+	client, mux, teardown := setup()
+	defer teardown()
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// add method check
+		fmt.Fprintf(w, `{"error":{"type":"DataException","message":"no data","code":800}}`)
+	})
+
+	req, _ := client.NewRequest(http.MethodGet, ".", nil)
+	_, err := client.Do(req, nil)
+
+	if err == nil {
+		t.Errorf("expected HTTP 400 error got nil")
+	}
+
+	want := &APIError{
+		Type:    "DataException",
+		Message: "no data",
+		Code:    800,
+	}
+
+	if rerr, ok := err.(*ErrorResponse); ok {
+		if got := rerr.APIError; !reflect.DeepEqual(got, want) {
+			t.Errorf("ErrorResponse.APIError: %#v, want: %#v", got, want)
+		}
+	}
+
 }

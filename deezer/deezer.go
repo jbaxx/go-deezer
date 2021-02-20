@@ -53,7 +53,6 @@ func (a *AlbumService) Get(id int) (*Album, *Response, error) {
 	i := strconv.Itoa(id)
 
 	url := fmt.Sprintf("album/%v", i)
-	fmt.Println("URL: ", url)
 
 	req, err := a.client.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -79,7 +78,6 @@ func (c *Client) NewRequest(method, url string, body interface{}) (*http.Request
 	}
 
 	// For now, the methods implemented do not require a Body in the request, setting it to nil.
-	fmt.Println("FullURL:", u.String())
 	req, err := http.NewRequest(method, u.String(), nil)
 	if err != nil {
 		return nil, err

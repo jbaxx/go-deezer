@@ -23,6 +23,17 @@ func setup() (*Client, *http.ServeMux, func()) {
 	return c, mux, server.Close
 }
 
+func TestNewClient(t *testing.T) {
+	c := NewClient()
+
+	want := defaultBaseURL
+	got := c.URL.String()
+
+	if got != want {
+		t.Errorf("NewClient URL is: %v, want: %v", got, want)
+	}
+}
+
 func TestGetAlbum(t *testing.T) {
 	client, mux, teardown := setup()
 	defer teardown()

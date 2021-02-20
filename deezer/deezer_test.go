@@ -53,6 +53,14 @@ func TestNewRequest(t *testing.T) {
 
 }
 
+func TestNewRequest_BadURL(t *testing.T) {
+	c := NewClient()
+	_, err := c.NewRequest(http.MethodGet, ":", nil)
+	if err == nil {
+		t.Errorf("expected error, got nil")
+	}
+}
+
 func TestGetAlbum(t *testing.T) {
 	client, mux, teardown := setup()
 	defer teardown()

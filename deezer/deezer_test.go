@@ -141,3 +141,26 @@ func TestDo_withDeezerAPIError(t *testing.T) {
 	}
 
 }
+
+func TestDo_malformedResponse(t *testing.T) {
+	client, mux, teardown := setup()
+	defer teardown()
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		fmt.Fprintf(w, `{"key": "value"`)
+	})
+
+	type base struct {
+		Key string
+	}
+
+	req, _ := client.NewRequest(http.MethodGet, ".", nil)
+	body := new(base)
+	_, err := client.Do(req, body)
+
+	if err == nil {
+		t.Errorf("expected error, got nil")
+	}
+
+}

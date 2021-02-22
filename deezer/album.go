@@ -1,6 +1,7 @@
 package deezer
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -29,6 +30,27 @@ func (a *AlbumService) Get(id int) (*Album, *Response, error) {
 	}
 
 	return album, resp, err
+
+}
+
+// GetRaw fetches an Album given an album id.
+func (a *AlbumService) GetRaw(id int) ([]byte, *Response, error) {
+	i := strconv.Itoa(id)
+
+	url := fmt.Sprintf("album/%v", i)
+
+	req, err := a.client.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var buf bytes.Buffer
+	resp, err := a.client.Do(req, &buf)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return buf.Bytes(), resp, err
 
 }
 

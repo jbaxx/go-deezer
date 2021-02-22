@@ -61,14 +61,19 @@ func TestNewRequest_BadURL(t *testing.T) {
 	}
 }
 
+func testMethod(t *testing.T, r *http.Request, want string) {
+	t.Helper()
+	if got := r.Method; got != want {
+		t.Errorf("Request method: %v, want: %v", got, want)
+	}
+}
+
 func TestDo(t *testing.T) {
 	client, mux, teardown := setup()
 	defer teardown()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.Method, http.MethodGet; got != want {
-			t.Errorf("Request method: %v, want: %v", got, want)
-		}
+		testMethod(t, r, http.MethodGet)
 		fmt.Fprintf(w, `{"key": "value"}`)
 	})
 
@@ -112,7 +117,7 @@ func TestDo_withDeezerAPIError(t *testing.T) {
 	defer teardown()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// add method check
+		testMethod(t, r, http.MethodGet)
 		fmt.Fprintf(w, `{"error":{"type":"DataException","message":"no data","code":800}}`)
 	})
 

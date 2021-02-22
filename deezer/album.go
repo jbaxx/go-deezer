@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
-	"strconv"
 )
 
 // AlbumService defines a client to interface with the Deezer Album service
@@ -13,10 +12,9 @@ type AlbumService struct {
 }
 
 // Get fetches an Album given an album id.
-func (a *AlbumService) Get(id int) (*Album, *Response, error) {
-	i := strconv.Itoa(id)
+func (a *AlbumService) Get(id string) (*Album, *Response, error) {
 
-	url := fmt.Sprintf("album/%v", i)
+	url := fmt.Sprintf("album/%v", id)
 
 	req, err := a.client.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -34,10 +32,9 @@ func (a *AlbumService) Get(id int) (*Album, *Response, error) {
 }
 
 // GetRaw fetches an Album given an album id.
-func (a *AlbumService) GetRaw(id int) ([]byte, *Response, error) {
-	i := strconv.Itoa(id)
+func (a *AlbumService) GetRaw(id string) ([]byte, *Response, error) {
 
-	url := fmt.Sprintf("album/%v", i)
+	url := fmt.Sprintf("album/%v", id)
 
 	req, err := a.client.NewRequest(http.MethodGet, url, nil)
 	if err != nil {

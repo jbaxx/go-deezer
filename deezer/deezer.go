@@ -120,6 +120,9 @@ type ErrorResponse struct {
 
 	// Error returned by the API on successful HTTP request
 	APIError *APIError `json:"error"`
+
+	// Carries any other error up the chain
+	Carrier error
 }
 
 // checkResponse inspect the repsonse status code for HTTP errors and returns them as errors if present,
@@ -138,17 +141,22 @@ func CheckResponse(r *http.Response) error {
 	if err != nil {
 		return err
 	}
+	bufferedBody := bytes.NewBuffer(body)
 	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
 	errorResponse := &ErrorResponse{Response: r}
 
 	if c := r.StatusCode; c >= 200 && c <= 299 {
-		err = json.Unmarshal(body, errorResponse)
+		// decodingErr := json.NewDecoder(resp.Body).Decode(v)
+		// err = json.Unmarshal(body, errorResponse)
+		err = json.NewDecoder(bufferedBody).Decode(errorResponse)
 		if err != nil {
 			errorResponse.Message = string(body)
+			errorResponse.Carrier = err
 			return errorResponse
 		}
 		if errorResponse.APIError != nil {
+			errorResponse.Carrier = err
 			return errorResponse
 		}
 		return nil
@@ -161,7 +169,9 @@ func CheckResponse(r *http.Response) error {
 }
 
 func (e *ErrorResponse) Error() string {
-	return fmt.Sprintf("%v %v: %d %v", e.Response.Request.Method, e.Response.Request.URL, e.Response.StatusCode, e.Message)
+	return fmt.Sprintf("%v %v: %d %v %v",
+		e.Response.Request.Method, e.Response.Request.URL,
+		e.Response.StatusCode, e.Message, e.Carrier)
 }
 
 type APIError struct {

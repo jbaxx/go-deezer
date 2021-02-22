@@ -12,11 +12,7 @@ func TestGetAlbum(t *testing.T) {
 	defer teardown()
 
 	mux.HandleFunc("/album/", func(w http.ResponseWriter, r *http.Request) {
-		want := "GET"
-		got := r.Method
-		if got != want {
-			t.Errorf("Request method: %v, want %v", got, want)
-		}
+		testMethod(t, r, http.MethodGet)
 		fmt.Fprintf(w, `{"id": 44132881}`)
 	})
 

@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"time"
 )
 
 // Base URL for all the API methods
@@ -16,24 +18,52 @@ const (
 	defaultBaseURL = "https://api.deezer.com/"
 )
 
+type LoggingRT struct {
+	next http.RoundTripper
+	out  io.Writer
+}
+
+func NewLoggingRT(next http.RoundTripper, out io.Writer) *LoggingRT {
+	return &LoggingRT{
+		next,
+		out,
+	}
+}
+
+func (rt *LoggingRT) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+	defer func(begin time.Time) {
+		fmt.Fprintf(rt.out, "method=%s host=%s status_code=%d took=%s\n",
+			req.Method, req.URL, resp.StatusCode, time.Since(begin))
+	}(time.Now())
+
+	return rt.next.RoundTrip(req)
+}
+
 // Client manages communication with the Deezer API.
 type Client struct {
 	client *http.Client
 	URL    *url.URL
 
-	Albums *AlbumService
+	Albums  *AlbumService
+	Artists *ArtistService
 }
 
 // NewClient returns a new Deezer API client.
 func NewClient() *Client {
+
+	rt := http.DefaultTransport
+	rt = NewLoggingRT(rt, os.Stderr)
 	// TODO: add authentication options
 	url, _ := url.Parse(defaultBaseURL)
 	c := &Client{
-		client: &http.Client{},
-		URL:    url,
+		client: &http.Client{
+			Transport: rt,
+		},
+		URL: url,
 	}
 
 	c.Albums = &AlbumService{client: c}
+	c.Artists = &ArtistService{client: c}
 
 	return c
 }
@@ -126,7 +156,9 @@ type ErrorResponse struct {
 }
 
 // checkResponse inspect the repsonse status code for HTTP errors and returns them as errors if present,
-//  given an http.Client's Do() does not returns an error on non-2xx status codes.
+//
+//	given an http.Client's Do() does not returns an error on non-2xx status codes.
+//
 // view: https://golang.org/pkg/net/http/#Client.Do
 func CheckResponse(r *http.Response) error {
 

@@ -16,6 +16,8 @@ ples/
 
 # Mains not ready to share
 deezer/cmd/
+cmd/
+*.json
 
 # Dependency directories (remove the comment below to include it)
 # vendor/

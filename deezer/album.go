@@ -1,7 +1,6 @@
 package deezer
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
 )
@@ -28,26 +27,6 @@ func (a *AlbumService) Get(id string) (*Album, *Response, error) {
 	}
 
 	return album, resp, err
-
-}
-
-// GetRaw fetches an Album given an album id.
-func (a *AlbumService) GetRaw(id string) ([]byte, *Response, error) {
-
-	url := fmt.Sprintf("album/%v", id)
-
-	req, err := a.client.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var buf bytes.Buffer
-	resp, err := a.client.Do(req, &buf)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return buf.Bytes(), resp, err
 
 }
 
@@ -112,19 +91,6 @@ type Contributors struct {
 	Tracklist     string `json:"tracklist"`
 	Type          string `json:"type"`
 	Role          string `json:"role"`
-}
-
-// Artist is for Album
-type Artist struct {
-	ID            int    `json:"id"`
-	Name          string `json:"name"`
-	Picture       string `json:"picture"`
-	PictureSmall  string `json:"picture_small"`
-	PictureMedium string `json:"picture_medium"`
-	PictureBig    string `json:"picture_big"`
-	PictureXl     string `json:"picture_xl"`
-	Tracklist     string `json:"tracklist"`
-	Type          string `json:"type"`
 }
 
 // TracksData is for Album

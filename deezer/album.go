@@ -1,6 +1,7 @@
 package deezer
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 )
@@ -11,7 +12,7 @@ type AlbumService struct {
 }
 
 // Get fetches an Album given an album id.
-func (a *AlbumService) Get(id string) (*Album, *Response, error) {
+func (a *AlbumService) Get(ctx context.Context, id string) (*Album, *Response, error) {
 
 	url := fmt.Sprintf("album/%v", id)
 
@@ -21,7 +22,7 @@ func (a *AlbumService) Get(id string) (*Album, *Response, error) {
 	}
 
 	album := new(Album)
-	resp, err := a.client.Do(req, album)
+	resp, err := a.client.Do(ctx, req, album)
 	if err != nil {
 		return nil, resp, err
 	}

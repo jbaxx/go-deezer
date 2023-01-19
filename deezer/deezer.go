@@ -2,13 +2,13 @@ package deezer
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 )
 
@@ -32,8 +32,12 @@ func NewLoggingRT(next http.RoundTripper, out io.Writer) *LoggingRT {
 
 func (rt *LoggingRT) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	defer func(begin time.Time) {
-		fmt.Fprintf(rt.out, "method=%s host=%s status_code=%d took=%s\n",
-			req.Method, req.URL, resp.StatusCode, time.Since(begin))
+		var statusCode int
+		if resp != nil {
+			statusCode = resp.StatusCode
+		}
+		fmt.Fprintf(rt.out, "method=%s host=%s error=%v status_code=%d took=%s\n",
+			req.Method, req.URL, err, statusCode, time.Since(begin))
 	}(time.Now())
 
 	return rt.next.RoundTrip(req)
@@ -41,37 +45,62 @@ func (rt *LoggingRT) RoundTrip(req *http.Request) (resp *http.Response, err erro
 
 // Client manages communication with the Deezer API.
 type Client struct {
-	client *http.Client
-	URL    *url.URL
+	client  *http.Client
+	BaseURL *url.URL
 
 	Albums  *AlbumService
 	Artists *ArtistService
 }
 
 // NewClient returns a new Deezer API client.
-func NewClient() *Client {
+func NewClient(client *http.Client) *Client {
 
-	rt := http.DefaultTransport
-	rt = NewLoggingRT(rt, os.Stderr)
-	// TODO: add authentication options
 	url, _ := url.Parse(defaultBaseURL)
 	c := &Client{
-		client: &http.Client{
-			Transport: rt,
-		},
-		URL: url,
+		client:  client,
+		BaseURL: url,
 	}
 
+	if client == nil {
+		c.client = &http.Client{}
+	}
+
+	// Register services.
 	c.Albums = &AlbumService{client: c}
 	c.Artists = &ArtistService{client: c}
 
 	return c
 }
 
+type ClientOp func(*Client) error
+
+func SetBaseURL(bu string) ClientOp {
+	return func(c *Client) error {
+		u, err := url.Parse(bu)
+		if err != nil {
+			return err
+		}
+		c.BaseURL = u
+		return nil
+	}
+}
+
+func New(client *http.Client, opts ...ClientOp) (*Client, error) {
+	c := NewClient(client)
+
+	for _, opt := range opts {
+		err := opt(c)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c, nil
+}
+
 // NewRequest creates a request. It takes care of using the BaseURL and setup common headers.
 // Setting up the BaseURL allows to seamlessly use the loopback interface when using the test server.
 func (c *Client) NewRequest(method, url string, body interface{}) (*http.Request, error) {
-	u, err := c.URL.Parse(url)
+	u, err := c.BaseURL.Parse(url)
 	if err != nil {
 		return nil, err
 	}
@@ -90,26 +119,28 @@ func (c *Client) NewRequest(method, url string, body interface{}) (*http.Request
 // Do makes an API request and returns a custom Response. The API response is JSON and will be decoded in the value
 // specified by v.
 // If v implements the io.Writer interface, the raw response will be written to v, without attempting to decode it.
-func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
-	resp, err := DoRequestWithClient(c.client, req)
+func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Response, error) {
+	resp, err := DoRequestWithClient(ctx, c.client, req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	err = CheckResponse(resp)
-	if err != nil {
-		return nil, err
-	}
+	// err = CheckResponse(resp)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	response := newResponse(resp)
+	// response := newResponse(resp)
 
 	switch v := v.(type) {
 	case nil:
 	case io.Writer:
-		_, err = io.Copy(v, resp.Body)
+		// _, err = io.Copy(v, resp.Body)
+		_, err = io.Copy(v, resp.Response.Body)
 	default:
-		decodingErr := json.NewDecoder(resp.Body).Decode(v)
+		// decodingErr := json.NewDecoder(resp.Body).Decode(v)
+		decodingErr := json.NewDecoder(resp.Response.Body).Decode(v)
 		if decodingErr == io.EOF {
 			decodingErr = nil
 		}
@@ -119,13 +150,35 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 	}
 
 	// Notice we return the custom response but use the http.Reponse (resp) to decode into the v interface.
-	return response, err
+	// return response, err
+	return resp, err
 }
 
 // DoRequestWithClient submits an HTTP request using the specified client.
-func DoRequestWithClient(client *http.Client, req *http.Request) (*http.Response, error) {
-	// req = req.WithContext(ctx)
-	return client.Do(req)
+// func DoRequestWithClient(ctx context.Context, client *http.Client, req *http.Request) (*http.Response, error) {
+func DoRequestWithClient(ctx context.Context, client *http.Client, req *http.Request) (*Response, error) {
+	req = req.WithContext(ctx)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		// select {
+		// case <-ctx.Done():
+		// 	return nil, fmt.Errorf("apendando: %v | %v", err, ctx.Err())
+		// default:
+		// }
+		return nil, err
+	}
+
+	err = CheckResponse(resp)
+	if err != nil {
+		defer resp.Body.Close()
+		return nil, err
+	}
+
+	response := newResponse(resp)
+
+	return response, nil
+	// return client.Do(req)
 }
 
 // Response is a wrapper for the standard http.Response.

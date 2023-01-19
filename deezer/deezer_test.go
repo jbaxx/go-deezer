@@ -1,6 +1,7 @@
 package deezer
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -17,17 +18,17 @@ func setup() (*Client, *http.ServeMux, func()) {
 
 	server := httptest.NewServer(mux)
 
-	c := NewClient()
-	c.URL, _ = url.Parse(server.URL)
+	c := NewClient(nil)
+	c.BaseURL, _ = url.Parse(server.URL)
 
 	return c, mux, server.Close
 }
 
 func TestNewClient(t *testing.T) {
-	c := NewClient()
+	c := NewClient(nil)
 
 	want := defaultBaseURL
-	got := c.URL.String()
+	got := c.BaseURL.String()
 
 	if got != want {
 		t.Errorf("NewClient URL is: %v, want: %v", got, want)
@@ -35,7 +36,7 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestNewRequest(t *testing.T) {
-	c := NewClient()
+	c := NewClient(nil)
 
 	inURL, outURL := "/algo", defaultBaseURL+"algo"
 	req, err := c.NewRequest(http.MethodGet, inURL, nil)
@@ -54,7 +55,7 @@ func TestNewRequest(t *testing.T) {
 }
 
 func TestNewRequest_BadURL(t *testing.T) {
-	c := NewClient()
+	c := NewClient(nil)
 	_, err := c.NewRequest(http.MethodGet, ":", nil)
 	if err == nil {
 		t.Errorf("expected error, got nil")
@@ -83,7 +84,7 @@ func TestDo(t *testing.T) {
 
 	req, _ := client.NewRequest(http.MethodGet, ".", nil)
 	body := new(base)
-	_, err := client.Do(req, body)
+	_, err := client.Do(context.Background(), req, body)
 	if err != nil {
 		t.Errorf("expected nil, got error: %v", err)
 	}
@@ -104,7 +105,7 @@ func TestDo_withHTTPError(t *testing.T) {
 	})
 
 	req, _ := client.NewRequest(http.MethodGet, ".", nil)
-	_, err := client.Do(req, nil)
+	_, err := client.Do(context.Background(), req, nil)
 
 	if err == nil {
 		t.Errorf("expected HTTP 400 error got nil")
@@ -122,7 +123,7 @@ func TestDo_withDeezerAPIError(t *testing.T) {
 	})
 
 	req, _ := client.NewRequest(http.MethodGet, ".", nil)
-	_, err := client.Do(req, nil)
+	_, err := client.Do(context.Background(), req, nil)
 
 	if err == nil {
 		t.Errorf("expected HTTP 400 error got nil")
@@ -157,7 +158,7 @@ func TestDo_malformedResponse(t *testing.T) {
 
 	req, _ := client.NewRequest(http.MethodGet, ".", nil)
 	body := new(base)
-	_, err := client.Do(req, body)
+	_, err := client.Do(context.Background(), req, body)
 
 	if err == nil {
 		t.Errorf("expected error, got nil")

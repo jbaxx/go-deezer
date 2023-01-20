@@ -74,9 +74,12 @@ func addOptions(s string, opt *ListOptions) (string, error) {
 
 // Client manages communication with the Deezer API.
 type Client struct {
-	client  *http.Client
+	// net/http Client used to communicate with the API.
+	client *http.Client
+	// BaseURL for the API endpoints.
 	BaseURL *url.URL
 
+	// A service per collection of endpoint resources.
 	Albums  *AlbumService
 	Artists *ArtistService
 }
@@ -149,48 +152,34 @@ func (c *Client) NewRequest(method, url string, body interface{}) (*http.Request
 // specified by v.
 // If v implements the io.Writer interface, the raw response will be written to v, without attempting to decode it.
 func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Response, error) {
-	resp, err := DoRequestWithClient(ctx, c.client, req)
+	resp, err := c.DoRequestWithClient(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	switch v := v.(type) {
-	case nil:
-	case io.Writer:
-		// _, err = io.Copy(v, resp.Body)
-		_, err = io.Copy(v, resp.Response.Body)
-	default:
-		// decodingErr := json.NewDecoder(resp.Body).Decode(v)
-		decodingErr := json.NewDecoder(resp.Response.Body).Decode(v)
-		if decodingErr == io.EOF {
-			decodingErr = nil
-		}
-		if decodingErr != nil {
-			err = decodingErr
-		}
+	decodingErr := json.NewDecoder(resp.Body).Decode(v)
+	if decodingErr == io.EOF {
+		decodingErr = nil
+	}
+	if decodingErr != nil {
+		err = decodingErr
 	}
 
 	// Notice we return the custom response but use the http.Reponse (resp) to decode into the v interface.
-	// return response, err
 	return resp, err
 }
 
 // DoRequestWithClient submits an HTTP request using the specified client.
-func DoRequestWithClient(ctx context.Context, client *http.Client, req *http.Request) (*Response, error) {
+func (c *Client) DoRequestWithClient(ctx context.Context, req *http.Request) (*Response, error) {
 	req = req.WithContext(ctx)
 
-	resp, err := client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
-		// select {
-		// case <-ctx.Done():
-		// 	return nil, fmt.Errorf("apendando: %v | %v", err, ctx.Err())
-		// default:
-		// }
 		return nil, err
 	}
 
-	err = CheckResponse(resp)
+	err = checkResponse(resp)
 	if err != nil {
 		defer resp.Body.Close()
 		return nil, err
@@ -199,7 +188,6 @@ func DoRequestWithClient(ctx context.Context, client *http.Client, req *http.Req
 	response := newResponse(resp)
 
 	return response, nil
-	// return client.Do(req)
 }
 
 // Response is a wrapper for the standard http.Response.
@@ -235,11 +223,9 @@ type ErrorResponse struct {
 }
 
 // checkResponse inspect the repsonse status code for HTTP errors and returns them as errors if present,
-//
-//	given an http.Client's Do() does not returns an error on non-2xx status codes.
-//
+// given an http.Client's Do() does not returns an error on non-2xx status codes.
 // view: https://golang.org/pkg/net/http/#Client.Do
-func CheckResponse(r *http.Response) error {
+func checkResponse(r *http.Response) error {
 
 	// As Deezer's API returns its errors in the response body
 	// within a 2xx status code, we need to inspect the body
@@ -252,15 +238,13 @@ func CheckResponse(r *http.Response) error {
 	if err != nil {
 		return err
 	}
-	bufferedBody := bytes.NewBuffer(body)
+	bufBody := bytes.NewBuffer(body)
 	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
 	errorResponse := &ErrorResponse{Response: r}
 
 	if c := r.StatusCode; c >= 200 && c <= 299 {
-		// decodingErr := json.NewDecoder(resp.Body).Decode(v)
-		// err = json.Unmarshal(body, errorResponse)
-		err = json.NewDecoder(bufferedBody).Decode(errorResponse)
+		err = json.NewDecoder(bufBody).Decode(errorResponse)
 		if err != nil {
 			errorResponse.Message = string(body)
 			errorResponse.Carrier = err

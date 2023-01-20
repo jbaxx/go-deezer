@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -159,7 +160,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 	defer resp.Body.Close()
 
 	decodingErr := json.NewDecoder(resp.Body).Decode(v)
-	if decodingErr == io.EOF {
+	if errors.Is(decodingErr, io.EOF) {
 		decodingErr = nil
 	}
 	if decodingErr != nil {

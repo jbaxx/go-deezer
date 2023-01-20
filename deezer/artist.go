@@ -14,7 +14,7 @@ type ArtistService struct {
 // Get fetches an Artist given an artist id.
 func (a *ArtistService) Get(ctx context.Context, id string) (*Artist, *Response, error) {
 
-	url := fmt.Sprintf("artist/%v", id)
+	url := fmt.Sprintf("artist/%s", id)
 
 	req, err := a.client.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -33,18 +33,18 @@ func (a *ArtistService) Get(ctx context.Context, id string) (*Artist, *Response,
 
 // Artist represents an artist
 type Artist struct {
-	ID            int    `json:"id"`
-	Name          string `json:"name"`
-	Link          string `json:"link"`
-	Share         string `json:"share"`
-	Picture       string `json:"picture"`
-	PictureSmall  string `json:"picture_small"`
-	PictureMedium string `json:"picture_medium"`
-	PictureBig    string `json:"picture_big"`
-	PictureXl     string `json:"picture_xl"`
-	NbAlbum       int    `json:"nb_album"`
-	NbFan         int    `json:"nb_fan"`
-	Radio         bool   `json:"radio"`
-	Tracklist     string `json:"tracklist"`
-	Type          string `json:"type"`
+	ID            int    `json:"id,omitempty"`
+	Name          string `json:"name,omitempty"`
+	Link          string `json:"link,omitempty"`
+	Share         string `json:"share,omitempty"`
+	Picture       string `json:"picture,omitempty"`
+	PictureSmall  string `json:"picture_small,omitempty"`
+	PictureMedium string `json:"picture_medium,omitempty"`
+	PictureBig    string `json:"picture_big,omitempty"`
+	PictureXl     string `json:"picture_xl,omitempty"`
+	NbAlbum       int    `json:"nb_album,omitempty"`
+	NbFan         int    `json:"nb_fan,omitempty"`
+	Radio         bool   `json:"radio,omitempty"`
+	Tracklist     string `json:"tracklist,omitempty"`
+	Type          string `json:"type,omitempty"`
 }

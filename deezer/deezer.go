@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/google/go-querystring/query"
 )
 
 // Base URL for all the API methods
@@ -41,6 +43,33 @@ func (rt *LoggingRT) RoundTrip(req *http.Request) (resp *http.Response, err erro
 	}(time.Now())
 
 	return rt.next.RoundTrip(req)
+}
+
+type ListOptions struct {
+	Index int `url:"index,omitempty"`
+	Limit int `url:"limit,omitempty"`
+}
+
+func addOptions(s string, opt *ListOptions) (string, error) {
+
+	origURL, err := url.Parse(s)
+	if err != nil {
+		return s, err
+	}
+
+	origValues := origURL.Query()
+
+	newValues, err := query.Values(opt)
+	if err != nil {
+		return s, err
+	}
+
+	for k, v := range newValues {
+		origValues[k] = v
+	}
+
+	origURL.RawQuery = origValues.Encode()
+	return origURL.String(), nil
 }
 
 // Client manages communication with the Deezer API.
@@ -126,13 +155,6 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 	}
 	defer resp.Body.Close()
 
-	// err = CheckResponse(resp)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// response := newResponse(resp)
-
 	switch v := v.(type) {
 	case nil:
 	case io.Writer:
@@ -155,7 +177,6 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 }
 
 // DoRequestWithClient submits an HTTP request using the specified client.
-// func DoRequestWithClient(ctx context.Context, client *http.Client, req *http.Request) (*http.Response, error) {
 func DoRequestWithClient(ctx context.Context, client *http.Client, req *http.Request) (*Response, error) {
 	req = req.WithContext(ctx)
 
@@ -185,6 +206,11 @@ func DoRequestWithClient(ctx context.Context, client *http.Client, req *http.Req
 // Typical use cases are: add pagination data, rate limits, etc.
 type Response struct {
 	*http.Response
+
+	// Pagination
+	Total    int
+	PrevPage string
+	NextPage string
 }
 
 // newResponse creates a new Response from a provided http.Response.
